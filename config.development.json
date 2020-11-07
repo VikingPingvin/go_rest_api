@@ -1,0 +1,6 @@
+{
+    "Port": 8080,
+    "TimeoutRead" : 15,
+	"TimeoutWrite": 15,
+	"TimeoutIdle" : 15
+}
