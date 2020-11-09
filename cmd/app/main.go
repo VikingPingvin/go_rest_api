@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
 	"time"
 	"vikingpingvin/restpractice/article"
 	"vikingpingvin/restpractice/router"
@@ -22,7 +25,7 @@ func main() {
 	log.Info().Msg("Routers initialized.")
 
 	// INIT DATABASE
-	articlesDb := article.InitializeArticles()
+	articlesDb := article.InitializeArticles() // Dummy db
 	log.Info().Msg(fmt.Sprintf("Database initialized with size #%d", len(*articlesDb)))
 
 	// START SERVER
@@ -38,9 +41,21 @@ func main() {
 		IdleTimeout:  10 * time.Second,
 	}
 
-	if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Error().
-			Err(errors.New("Server startup error")).
-			Msg("Error bringing up server!")
-	}
+	go func() {
+		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Error().
+				Err(errors.New("Server startup error")).
+				Msg("Error bringing up server!")
+		}
+	}()
+
+	osSignal := make(chan os.Signal, 1)
+	signal.Notify(osSignal, os.Interrupt)
+	<-osSignal
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	log.Info().Msg("Shutting down server...")
+	s.Shutdown(ctx)
+	os.Exit(0)
 }
